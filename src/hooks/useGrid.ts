@@ -152,6 +152,88 @@ export function useGrid() {
     setGrid(newGrid);
   }, []);
 
+  const insertRow = useCallback((at: number) => {
+    setGrid((prev) => {
+      const updatedCells: Record<string, CellData> = {};
+      for (const cell of Object.values(prev.cells)) {
+        const newRow = cell.row >= at ? cell.row + 1 : cell.row;
+        updatedCells[cellKey(newRow, cell.col)] = { ...cell, row: newRow };
+      }
+      const updatedRowHeights: Record<number, number> = {};
+      for (const [k, v] of Object.entries(prev.rowHeights)) {
+        const r = Number(k);
+        updatedRowHeights[r >= at ? r + 1 : r] = v;
+      }
+      return { ...prev, cells: updatedCells, rowHeights: updatedRowHeights, numRows: prev.numRows + 1 };
+    });
+  }, []);
+
+  const deleteRow = useCallback((at: number) => {
+    setGrid((prev) => {
+      if (prev.numRows <= 1) return prev;
+      const updatedCells: Record<string, CellData> = {};
+      for (const cell of Object.values(prev.cells)) {
+        if (cell.row === at) continue;
+        const newRow = cell.row > at ? cell.row - 1 : cell.row;
+        updatedCells[cellKey(newRow, cell.col)] = { ...cell, row: newRow };
+      }
+      const updatedRowHeights: Record<number, number> = {};
+      for (const [k, v] of Object.entries(prev.rowHeights)) {
+        const r = Number(k);
+        if (r === at) continue;
+        updatedRowHeights[r > at ? r - 1 : r] = v;
+      }
+      return {
+        ...prev,
+        cells: updatedCells,
+        rowHeights: updatedRowHeights,
+        numRows: Math.max(INITIAL_ROWS, prev.numRows - 1),
+      };
+    });
+  }, []);
+
+  const insertCol = useCallback((at: number) => {
+    setGrid((prev) => {
+      const updatedCells: Record<string, CellData> = {};
+      for (const cell of Object.values(prev.cells)) {
+        const newCol = cell.col >= at ? cell.col + 1 : cell.col;
+        updatedCells[cellKey(cell.row, newCol)] = { ...cell, col: newCol };
+      }
+      const updatedColWidths: Record<number, number> = {};
+      for (const [k, v] of Object.entries(prev.colWidths)) {
+        const c = Number(k);
+        updatedColWidths[c >= at ? c + 1 : c] = v;
+      }
+      return { ...prev, cells: updatedCells, colWidths: updatedColWidths, numCols: prev.numCols + 1 };
+    });
+  }, []);
+
+  const deleteCol = useCallback((at: number) => {
+    setGrid((prev) => {
+      if (prev.numCols <= 1) return prev;
+      const updatedCells: Record<string, CellData> = {};
+      for (const cell of Object.values(prev.cells)) {
+        if (cell.col === at) continue;
+        const newCol = cell.col > at ? cell.col - 1 : cell.col;
+        updatedCells[cellKey(cell.row, newCol)] = { ...cell, col: newCol };
+      }
+      const updatedColWidths: Record<number, number> = {};
+      for (const [k, v] of Object.entries(prev.colWidths)) {
+        const c = Number(k);
+        if (c === at) continue;
+        updatedColWidths[c > at ? c - 1 : c] = v;
+      }
+      return {
+        ...prev,
+        cells: updatedCells,
+        colWidths: updatedColWidths,
+        numCols: Math.max(INITIAL_COLS, prev.numCols - 1),
+      };
+    });
+  }, []);
+
+
+
   const clearGrid = useCallback(() => {
     setGrid(createInitialGrid());
   }, []);
@@ -169,6 +251,10 @@ export function useGrid() {
     getRowHeight,
     getColWidth,
     setCellColors,
+    insertRow,
+    deleteRow,
+    insertCol,
+    deleteCol,
     loadGrid,
     clearGrid,
   };

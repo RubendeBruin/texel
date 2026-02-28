@@ -138,7 +138,7 @@ export const Cell: React.FC<CellProps> = ({
       onEditEnd(); // return focus to grid for arrow-key navigation
     }
     // Shift+Enter = new line (default). Ctrl+Enter = commit.
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    if ((e.ctrlKey || e.metaKey || e.shiftKey) && e.key === 'Enter') {
       e.preventDefault();
       setEditing(false);
       onContentChange(row, col, draft);
@@ -260,7 +260,7 @@ export const Cell: React.FC<CellProps> = ({
             const clampedW = Math.min(MAX_W, Math.max(MIN_W, longestLine));
             if (clampedW !== width) onResizeCol(col, clampedW);
           }}
-          placeholder="Type Markdown here…&#10;&#10;Ctrl+Enter or click outside to confirm"
+          placeholder="Type Markdown here…&#10;&#10;Ctrl+Enter, Shift+Enter, or click outside to confirm"
           style={{ width, height, ...(cellColor ? { background: cellColor, color: '#111' } : {}) }}
         />
       ) : (

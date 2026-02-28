@@ -32,6 +32,10 @@ function App() {
     setAllColWidths,
     setAllRowHeights,
     setCellColors,
+    insertRow,
+    deleteRow,
+    insertCol,
+    deleteCol,
     loadGrid,
     clearGrid,
   } = useGrid();
@@ -109,6 +113,10 @@ function App() {
         setRowHeight={setRowHeight}
         setColWidth={setColWidth}
         setCellColors={setCellColors}
+        insertRow={insertRow}
+        deleteRow={deleteRow}
+        insertCol={insertCol}
+        deleteCol={deleteCol}
       />
     </div>
   );

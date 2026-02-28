@@ -17,6 +17,17 @@ function getPopulatedBounds(grid: GridState) {
 /** Scale px -> pt (72pt/96px) */
 const PX_TO_PT = 72 / 96;
 
+/** Parse a 6-digit hex colour string to {r,g,b} (falls back to white). */
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const cleaned = hex.replace('#', '');
+  if (cleaned.length !== 6) return { r: 255, g: 255, b: 255 };
+  return {
+    r: parseInt(cleaned.slice(0, 2), 16),
+    g: parseInt(cleaned.slice(2, 4), 16),
+    b: parseInt(cleaned.slice(4, 6), 16),
+  };
+}
+
 export function exportToPDF(grid: GridState, title = 'Texel Export') {
   const { maxRow, maxCol } = getPopulatedBounds(grid);
 
@@ -60,8 +71,9 @@ export function exportToPDF(grid: GridState, title = 'Texel Export') {
       const cw = colWidths[c] * PX_TO_PT;
       const cell = grid.cells[cellKey(r, c)];
 
-      // Cell background — always light for print
-      doc.setFillColor(255, 255, 255);
+      // Cell background — use cell colour when present, otherwise white for print
+      const bg = cell?.color ? hexToRgb(cell.color) : { r: 255, g: 255, b: 255 };
+      doc.setFillColor(bg.r, bg.g, bg.b);
       doc.setDrawColor(200, 200, 200);
       doc.setLineWidth(0.5);
       doc.rect(x, y, cw, rh, 'FD');

@@ -114,3 +114,8 @@ html, body, #root {
   padding: 8px;
   tab-size: 2;
 }
+
+/* Context menu item hover */
+.ctx-menu-item:hover {
+  background: var(--surface2) !important;
+}

@@ -46,7 +46,7 @@ export function exportToSVG(grid: GridState, title = 'Texel Export') {
   lines.push(`<rect width="${svgWidth}" height="${svgHeight}" fill="#ffffff"/>`); 
   lines.push(`<style>
     text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #1a1a1a; }
-    .cell-bg { fill: #ffffff; stroke: #d0d0d0; stroke-width: 1; }
+    .cell-bg { stroke: #d0d0d0; stroke-width: 1; }
     .h1 { font-size: 18px; font-weight: bold; }
     .h2 { font-size: 15px; font-weight: bold; }
     .h3 { font-size: 13px; font-weight: bold; }
@@ -62,8 +62,10 @@ export function exportToSVG(grid: GridState, title = 'Texel Export') {
       const w = colWidths[c];
       const h = rowHeights[r];
       const cell = grid.cells[cellKey(r, c)];
+      const bgFill = cell?.color ?? '#ffffff';
 
-      lines.push(`<rect class="cell-bg" x="${x}" y="${y}" width="${w}" height="${h}"/>`);
+      lines.push(`<rect class="cell-bg" x="${x}" y="${y}" width="${w}" height="${h}" fill="${bgFill}"/>`);
+
 
       if (cell?.content) {
         // Naive markdown-to-SVG: render line by line, detect headings

@@ -23,6 +23,10 @@ interface GridProps {
   setRowHeight: (row: number, height: number) => void;
   setColWidth: (col: number, width: number) => void;
   setCellColors: (positions: { row: number; col: number }[], color: string | undefined) => void;
+  insertRow: (at: number) => void;
+  deleteRow: (at: number) => void;
+  insertCol: (at: number) => void;
+  deleteCol: (at: number) => void;
 }
 
 const ROW_HEADER_W = 52;
@@ -60,6 +64,21 @@ function inRect(rect: ReturnType<typeof getRect>, r: number, c: number): boolean
 
 // ──────────────────────────────────────────────────────────────────────────────
 
+function ctxItemStyle(danger: boolean): React.CSSProperties {
+  return {
+    display: 'block',
+    width: '100%',
+    textAlign: 'left',
+    background: 'none',
+    border: 'none',
+    padding: '7px 16px',
+    cursor: 'pointer',
+    fontSize: 13,
+    color: danger ? '#f25c5c' : 'var(--text)',
+    borderRadius: 0,
+  };
+}
+
 export const Grid: React.FC<GridProps> = ({
   numRows,
   numCols,
@@ -71,6 +90,10 @@ export const Grid: React.FC<GridProps> = ({
   setRowHeight,
   setColWidth,
   setCellColors,
+  insertRow,
+  deleteRow,
+  insertCol,
+  deleteCol,
 }) => {
   // Selection: anchor = primary cell; selectionEnd extends a range (shift+click / shift+arrow)
   const [anchor, setAnchor] = useState<Pos | null>(null);
@@ -80,7 +103,35 @@ export const Grid: React.FC<GridProps> = ({
   const [fillColor, setFillColor] = useState('#ffd700');
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // ── context menu ────────────────────────────────────────────────────────────
+  type CtxMenu =
+    | { kind: 'row'; index: number; x: number; y: number }
+    | { kind: 'col'; index: number; x: number; y: number };
+  const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null);
+
+  const openRowMenu = useCallback((e: React.MouseEvent, row: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCtxMenu({ kind: 'row', index: row, x: e.clientX, y: e.clientY });
+  }, []);
+
+  const openColMenu = useCallback((e: React.MouseEvent, col: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setCtxMenu({ kind: 'col', index: col, x: e.clientX, y: e.clientY });
+  }, []);
+
+  const closeCtxMenu = useCallback(() => setCtxMenu(null), []);
+
   const selRect = getRect(anchor, selectionEnd);
+
+  // Dismiss context menu when clicking elsewhere
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const handler = () => setCtxMenu(null);
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
+  }, [ctxMenu]);
 
   // Scroll anchor cell into view when selection moves
   useEffect(() => {
@@ -214,6 +265,41 @@ export const Grid: React.FC<GridProps> = ({
           }}
         >
           <span style={{ fontSize: 12, color: 'var(--text-dim)', userSelect: 'none' }}>Fill:</span>
+          {/* Preset swatches — click to apply immediately */}
+          {[
+            { color: '#ffe033', title: 'Yellow' },
+            { color: '#4cdb6a', title: 'Green' },
+            { color: '#3aaeef', title: 'Blue' },
+            { color: '#f25c5c', title: 'Red' },
+            { color: '#ff8c2a', title: 'Orange' },
+            { color: '#b35cf2', title: 'Purple' },
+            { color: '#1fdbb5', title: 'Mint' },
+            { color: '#c0c0c0', title: 'Grey' },
+          ].map(({ color, title }) => (
+            <button
+              key={color}
+              title={title}
+              onClick={() => {
+                setFillColor(color);
+                if (!selRect) return;
+                const positions: Pos[] = [];
+                for (let r = selRect.minRow; r <= selRect.maxRow; r++)
+                  for (let c = selRect.minCol; c <= selRect.maxCol; c++)
+                    positions.push({ row: r, col: c });
+                setCellColors(positions, color);
+              }}
+              style={{
+                width: 20,
+                height: 20,
+                padding: 0,
+                background: color,
+                border: fillColor === color ? '2px solid var(--accent)' : '1px solid #aaa',
+                borderRadius: 3,
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            />
+          ))}
           <input
             type="color"
             value={fillColor}
@@ -227,7 +313,7 @@ export const Grid: React.FC<GridProps> = ({
               cursor: 'pointer',
               background: 'none',
             }}
-            title="Choose fill colour"
+            title="Custom colour"
           />
           <button
             onClick={handleApplyFill}
@@ -304,6 +390,7 @@ export const Grid: React.FC<GridProps> = ({
                   return (
                     <th
                       key={c}
+                      onContextMenu={(e) => openColMenu(e, c)}
                       style={{
                         position: 'sticky',
                         top: 0,
@@ -341,6 +428,7 @@ export const Grid: React.FC<GridProps> = ({
                   <tr key={r}>
                     {/* Row header — sticky left */}
                     <td
+                      onContextMenu={(e) => openRowMenu(e, r)}
                       style={{
                         position: 'sticky',
                         left: 0,
@@ -440,6 +528,54 @@ export const Grid: React.FC<GridProps> = ({
           })()}
         </DragOverlay>
       </DndContext>
+
+      {/* Context menu — fixed-positioned so it floats above everything */}
+      {ctxMenu && (
+        <div
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{
+            position: 'fixed',
+            top: ctxMenu.y,
+            left: ctxMenu.x,
+            zIndex: 9999,
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 6,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+            minWidth: 190,
+            padding: '4px 0',
+            fontSize: 13,
+          }}
+        >
+          {ctxMenu.kind === 'row' ? (
+            <>
+              <div style={{ padding: '3px 12px 6px', fontSize: 11, color: 'var(--text-dim)', userSelect: 'none', borderBottom: '1px solid var(--border)' }}>
+                Row {ctxMenu.index + 1}
+              </div>
+              {([
+                { label: 'Insert row above', action: () => { insertRow(ctxMenu.index); closeCtxMenu(); } },
+                { label: 'Insert row below', action: () => { insertRow(ctxMenu.index + 1); closeCtxMenu(); } },
+                { label: 'Delete row', action: () => { deleteRow(ctxMenu.index); closeCtxMenu(); }, danger: true },
+              ] as { label: string; action: () => void; danger?: boolean }[]).map(({ label, action, danger }) => (
+                <button key={label} onClick={action} className="ctx-menu-item" style={ctxItemStyle(!!danger)}>{label}</button>
+              ))}
+            </>
+          ) : (
+            <>
+              <div style={{ padding: '3px 12px 6px', fontSize: 11, color: 'var(--text-dim)', userSelect: 'none', borderBottom: '1px solid var(--border)' }}>
+                Column {colLabel(ctxMenu.index)}
+              </div>
+              {([
+                { label: 'Insert column left',  action: () => { insertCol(ctxMenu.index); closeCtxMenu(); } },
+                { label: 'Insert column right', action: () => { insertCol(ctxMenu.index + 1); closeCtxMenu(); } },
+                { label: 'Delete column', action: () => { deleteCol(ctxMenu.index); closeCtxMenu(); }, danger: true },
+              ] as { label: string; action: () => void; danger?: boolean }[]).map(({ label, action, danger }) => (
+                <button key={label} onClick={action} className="ctx-menu-item" style={ctxItemStyle(!!danger)}>{label}</button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };
