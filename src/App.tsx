@@ -1,0 +1,89 @@
+import React, { useState, useCallback } from 'react';
+import { Toolbar } from './components/Toolbar';
+import { Grid } from './components/Grid';
+import { useGrid } from './hooks/useGrid';
+import { gridToJson, jsonToGrid, saveFile, openFileDialog } from './utils/fileIO';
+import { exportToSVG } from './utils/exportSVG';
+import { exportToPDF } from './utils/exportPDF';
+
+function App() {
+  const [title, setTitle] = useState('Untitled');
+  const {
+    grid,
+    getCell,
+    setCell,
+    moveCell,
+    getRowHeight,
+    getColWidth,
+    setRowHeight,
+    setColWidth,
+    loadGrid,
+    clearGrid,
+  } = useGrid();
+
+  const handleNew = useCallback(() => {
+    if (confirm('Start a new document? Unsaved changes will be lost.')) {
+      clearGrid();
+      setTitle('Untitled');
+    }
+  }, [clearGrid]);
+
+  const handleSave = useCallback(() => {
+    const json = gridToJson(grid, title);
+    saveFile(json, `${title || 'texel'}.texel`, 'application/json');
+  }, [grid, title]);
+
+  const handleLoad = useCallback(async () => {
+    try {
+      const raw = await openFileDialog();
+      const file = jsonToGrid(raw);
+      loadGrid(file.grid);
+      setTitle(file.metadata.title || 'Untitled');
+    } catch (e) {
+      alert('Failed to open file: ' + (e as Error).message);
+    }
+  }, [loadGrid]);
+
+  const handleExportSVG = useCallback(() => {
+    exportToSVG(grid, title || 'texel');
+  }, [grid, title]);
+
+  const handleExportPDF = useCallback(() => {
+    exportToPDF(grid, title || 'texel');
+  }, [grid, title]);
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        width: '100vw',
+        overflow: 'hidden',
+      }}
+    >
+      <Toolbar
+        title={title}
+        onTitleChange={setTitle}
+        onNew={handleNew}
+        onSave={handleSave}
+        onLoad={handleLoad}
+        onExportSVG={handleExportSVG}
+        onExportPDF={handleExportPDF}
+      />
+      <Grid
+        numRows={grid.numRows}
+        numCols={grid.numCols}
+        getCell={getCell}
+        setCell={setCell}
+        moveCell={moveCell}
+        getRowHeight={getRowHeight}
+        getColWidth={getColWidth}
+        setRowHeight={setRowHeight}
+        setColWidth={setColWidth}
+      />
+    </div>
+  );
+}
+
+export default App;

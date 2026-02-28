@@ -1,0 +1,203 @@
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
+
+interface CellProps {
+  row: number;
+  col: number;
+  width: number;
+  height: number;
+  content: string;
+  isSelected: boolean;
+  onSelect: (row: number, col: number) => void;
+  onContentChange: (row: number, col: number, content: string) => void;
+}
+
+export const Cell: React.FC<CellProps> = ({
+  row,
+  col,
+  width,
+  height,
+  content,
+  isSelected,
+  onSelect,
+  onContentChange,
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(content);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const id = `cell-${row}-${col}`;
+
+  // DnD - draggable
+  const {
+    attributes: dragAttrs,
+    listeners: dragListeners,
+    setNodeRef: setDragRef,
+    isDragging,
+  } = useDraggable({
+    id,
+    data: { row, col },
+    disabled: editing,
+  });
+
+  // DnD - droppable
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: `drop-${row}-${col}`,
+    data: { row, col },
+  });
+
+  // Combined ref
+  const setRefs = useCallback(
+    (el: HTMLDivElement | null) => {
+      setDragRef(el);
+      setDropRef(el);
+    },
+    [setDragRef, setDropRef]
+  );
+
+  // Sync draft when content changes externally
+  useEffect(() => {
+    if (!editing) setDraft(content);
+  }, [content, editing]);
+
+  // Focus editor when entering edit mode
+  useEffect(() => {
+    if (editing && textareaRef.current) {
+      textareaRef.current.focus();
+      const len = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(len, len);
+    }
+  }, [editing]);
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelect(row, col);
+    setEditing(true);
+    setDraft(content);
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelect(row, col);
+  };
+
+  const commitEdit = useCallback(() => {
+    setEditing(false);
+    onContentChange(row, col, draft);
+  }, [draft, onContentChange, row, col]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Escape') {
+      setEditing(false);
+      setDraft(content);
+    }
+    // Shift+Enter = new line (default). Ctrl+Enter = commit.
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      commitEdit();
+    }
+  };
+
+  const hasContent = !!content.trim();
+
+  const borderColor = isOver
+    ? 'var(--accent)'
+    : isSelected
+    ? 'var(--accent2)'
+    : 'var(--cell-border)';
+
+  return (
+    <div
+      ref={setRefs}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
+      style={{
+        width,
+        height,
+        flexShrink: 0,
+        border: `1px solid ${borderColor}`,
+        background: isOver
+          ? 'rgba(83,52,131,0.3)'
+          : isSelected
+          ? 'var(--cell-bg-selected)'
+          : 'var(--cell-bg)',
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: editing ? 'text' : isDragging ? 'grabbing' : 'default',
+        opacity: isDragging ? 0.4 : 1,
+        userSelect: editing ? 'text' : 'none',
+        transition: 'background 0.1s, border-color 0.1s',
+      }}
+    >
+      {/* Drag handle — only shown when content exists and not editing */}
+      {hasContent && !editing && (
+        <div
+          title="Drag to move"
+          {...dragAttrs}
+          {...dragListeners}
+          style={{
+            position: 'absolute',
+            top: 3,
+            right: 3,
+            width: 14,
+            height: 14,
+            cursor: 'grab',
+            opacity: 0.35,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-around',
+            alignItems: 'center',
+            zIndex: 2,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              style={{
+                display: 'block',
+                width: 10,
+                height: 2,
+                background: 'var(--text-dim)',
+                borderRadius: 1,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {editing ? (
+        <textarea
+          ref={textareaRef}
+          className="cell-editor"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={handleKeyDown}
+          placeholder="Type Markdown here…&#10;&#10;Ctrl+Enter or click outside to confirm"
+          style={{ width, height }}
+        />
+      ) : (
+        <div
+          className="md-rendered"
+          style={{
+            padding: '6px 8px',
+            width: '100%',
+            height: '100%',
+            overflow: 'hidden',
+            fontSize: 13,
+            lineHeight: 1.5,
+            color: hasContent ? 'var(--text)' : 'var(--text-dim)',
+          }}
+        >
+          {hasContent ? (
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          ) : (
+            <span style={{ opacity: 0.3, fontSize: 11 }}>double-click to edit</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
