@@ -50,7 +50,7 @@ export const Grid: React.FC<GridProps> = ({
 }) => {
   const [selected, setSelected] = useState<{ row: number; col: number } | null>(null);
   const [draggingCell, setDraggingCell] = useState<{ row: number; col: number } | null>(null);
-  const [editRequest, setEditRequest] = useState(0);
+  const [pendingEdit, setPendingEdit] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Scroll the selected cell into view whenever selection changes
@@ -87,7 +87,7 @@ export const Grid: React.FC<GridProps> = ({
 
       if (e.key === 'Enter') {
         setSelected({ row, col });
-        setEditRequest((n) => n + 1);
+        setPendingEdit(true);
         return;
       }
 
@@ -259,7 +259,8 @@ export const Grid: React.FC<GridProps> = ({
                           onContentChange={setCell}
                           onResizeRow={setRowHeight}
                           onResizeCol={setColWidth}
-                          editSignal={isThisSelected ? editRequest : 0}
+                          autoEdit={isThisSelected && pendingEdit}
+                          onAutoEditHandled={() => setPendingEdit(false)}
                           onEditEnd={returnFocusToGrid}
                         />
                       </td>

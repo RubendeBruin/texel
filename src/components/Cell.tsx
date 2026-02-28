@@ -30,7 +30,9 @@ interface CellProps {
   onContentChange: (row: number, col: number, content: string) => void;
   onResizeRow: (row: number, height: number) => void;
   onResizeCol: (col: number, width: number) => void;
-  editSignal: number;
+  /** When true, the cell should immediately enter edit mode (then call onAutoEditHandled). */
+  autoEdit: boolean;
+  onAutoEditHandled: () => void;
   onEditEnd: () => void;
 }
 
@@ -45,7 +47,8 @@ export const Cell: React.FC<CellProps> = ({
   onContentChange,
   onResizeRow,
   onResizeCol,
-  editSignal,
+  autoEdit,
+  onAutoEditHandled,
   onEditEnd,
 }) => {
   const [editing, setEditing] = useState(false);
@@ -85,15 +88,17 @@ export const Cell: React.FC<CellProps> = ({
     if (!editing) setDraft(content);
   }, [content, editing]);
 
-  // Enter-edit trigger from Grid keyboard navigation
-  const lastEditSignalRef = useRef(0);
+  // Enter-edit trigger from Grid keyboard navigation.
+  // autoEdit is true only for the single render where Enter was pressed;
+  // we call onAutoEditHandled() immediately so the parent resets it to false.
   useEffect(() => {
-    if (editSignal > lastEditSignalRef.current) {
-      lastEditSignalRef.current = editSignal;
+    if (autoEdit) {
       setEditing(true);
       setDraft(content);
+      onAutoEditHandled();
     }
-  }, [editSignal, content]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoEdit]);
 
   // Focus editor when entering edit mode
   useEffect(() => {
