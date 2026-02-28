@@ -30,6 +30,8 @@ interface CellProps {
   onContentChange: (row: number, col: number, content: string) => void;
   onResizeRow: (row: number, height: number) => void;
   onResizeCol: (col: number, width: number) => void;
+  editSignal: number;
+  onEditEnd: () => void;
 }
 
 export const Cell: React.FC<CellProps> = ({
@@ -43,6 +45,8 @@ export const Cell: React.FC<CellProps> = ({
   onContentChange,
   onResizeRow,
   onResizeCol,
+  editSignal,
+  onEditEnd,
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(content);
@@ -81,6 +85,16 @@ export const Cell: React.FC<CellProps> = ({
     if (!editing) setDraft(content);
   }, [content, editing]);
 
+  // Enter-edit trigger from Grid keyboard navigation
+  const lastEditSignalRef = useRef(0);
+  useEffect(() => {
+    if (editSignal > lastEditSignalRef.current) {
+      lastEditSignalRef.current = editSignal;
+      setEditing(true);
+      setDraft(content);
+    }
+  }, [editSignal, content]);
+
   // Focus editor when entering edit mode
   useEffect(() => {
     if (editing && textareaRef.current) {
@@ -105,17 +119,23 @@ export const Cell: React.FC<CellProps> = ({
   const commitEdit = useCallback(() => {
     setEditing(false);
     onContentChange(row, col, draft);
+    // Note: blur-triggered commit intentionally does NOT call onEditEnd
+    // so focus stays wherever the user clicked.
   }, [draft, onContentChange, row, col]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Escape') {
+      e.preventDefault();
       setEditing(false);
       setDraft(content);
+      onEditEnd(); // return focus to grid for arrow-key navigation
     }
     // Shift+Enter = new line (default). Ctrl+Enter = commit.
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
-      commitEdit();
+      setEditing(false);
+      onContentChange(row, col, draft);
+      onEditEnd(); // return focus to grid for arrow-key navigation
     }
   };
 

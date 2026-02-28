@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -50,6 +50,58 @@ export const Grid: React.FC<GridProps> = ({
 }) => {
   const [selected, setSelected] = useState<{ row: number; col: number } | null>(null);
   const [draggingCell, setDraggingCell] = useState<{ row: number; col: number } | null>(null);
+  const [editRequest, setEditRequest] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Scroll the selected cell into view whenever selection changes
+  useEffect(() => {
+    if (!selected || !scrollRef.current) return;
+    const td = scrollRef.current.querySelector<HTMLElement>(
+      `[data-cellkey="${selected.row}-${selected.col}"]`
+    );
+    td?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [selected]);
+
+  const returnFocusToGrid = useCallback(() => {
+    scrollRef.current?.focus();
+  }, []);
+
+  const handleGridKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      // Let the textarea handle its own keys while editing
+      if ((e.target as HTMLElement).tagName === 'TEXTAREA') return;
+
+      const NAV_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Escape', 'Tab'];
+      if (!NAV_KEYS.includes(e.key)) return;
+
+      e.preventDefault();
+
+      if (e.key === 'Escape') {
+        setSelected(null);
+        return;
+      }
+
+      // If nothing is selected yet, start at top-left
+      const row = selected?.row ?? 0;
+      const col = selected?.col ?? 0;
+
+      if (e.key === 'Enter') {
+        setSelected({ row, col });
+        setEditRequest((n) => n + 1);
+        return;
+      }
+
+      let newRow = row;
+      let newCol = col;
+      if (e.key === 'ArrowUp') newRow = Math.max(0, row - 1);
+      else if (e.key === 'ArrowDown') newRow = Math.min(numRows - 1, row + 1);
+      else if (e.key === 'ArrowLeft') newCol = Math.max(0, col - 1);
+      else if (e.key === 'ArrowRight' || e.key === 'Tab') newCol = Math.min(numCols - 1, col + 1);
+
+      setSelected({ row: newRow, col: newCol });
+    },
+    [selected, numRows, numCols]
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -86,8 +138,11 @@ export const Grid: React.FC<GridProps> = ({
     >
       {/* Outer scroll container — needed for sticky to work */}
       <div
-        style={{ flex: 1, overflow: 'auto', position: 'relative' }}
+        ref={scrollRef}
+        tabIndex={0}
+        style={{ flex: 1, overflow: 'auto', position: 'relative', outline: 'none' }}
         onClick={() => setSelected(null)}
+        onKeyDown={handleGridKeyDown}
       >
         <table style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
           <thead>
@@ -178,9 +233,11 @@ export const Grid: React.FC<GridProps> = ({
                   {Array.from({ length: numCols }, (_, c) => {
                     const w = getColWidth(c);
                     const cell = getCell(r, c);
+                    const isThisSelected = selected?.row === r && selected?.col === c;
                     return (
                       <td
                         key={c}
+                        data-cellkey={`${r}-${c}`}
                         style={{
                           padding: 0,
                           width: w,
@@ -197,11 +254,13 @@ export const Grid: React.FC<GridProps> = ({
                           width={w}
                           height={h}
                           content={cell?.content ?? ''}
-                          isSelected={selected?.row === r && selected?.col === c}
+                          isSelected={isThisSelected}
                           onSelect={handleSelect}
                           onContentChange={setCell}
                           onResizeRow={setRowHeight}
                           onResizeCol={setColWidth}
+                          editSignal={isThisSelected ? editRequest : 0}
+                          onEditEnd={returnFocusToGrid}
                         />
                       </td>
                     );
