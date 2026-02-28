@@ -212,7 +212,7 @@ export const Grid: React.FC<GridProps> = ({
       </div>
 
       {/* Drag overlay */}
-      <DragOverlay modifiers={[restrictToWindowEdges]}>
+      <DragOverlay dropAnimation={null}>
         {draggingCell && (() => {
           const cell = getCell(draggingCell.row, draggingCell.col);
           return (
