@@ -5,6 +5,7 @@ export interface CellData {
   row: number;
   col: number;
   content: string; // markdown text
+  color?: string;  // optional background fill color (hex)
 }
 
 export interface GridState {

@@ -25,8 +25,9 @@ interface CellProps {
   width: number;
   height: number;
   content: string;
+  cellColor?: string;
   isSelected: boolean;
-  onSelect: (row: number, col: number) => void;
+  onSelect: (row: number, col: number, extend?: boolean) => void;
   onContentChange: (row: number, col: number, content: string) => void;
   onResizeRow: (row: number, height: number) => void;
   onResizeCol: (col: number, width: number) => void;
@@ -47,6 +48,7 @@ export const Cell: React.FC<CellProps> = ({
   onContentChange,
   onResizeRow,
   onResizeCol,
+  cellColor,
   autoEdit,
   onAutoEditHandled,
   onEditEnd,
@@ -118,7 +120,7 @@ export const Cell: React.FC<CellProps> = ({
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onSelect(row, col);
+    onSelect(row, col, e.shiftKey);
   };
 
   const commitEdit = useCallback(() => {
@@ -152,6 +154,26 @@ export const Cell: React.FC<CellProps> = ({
     ? 'var(--accent2)'
     : 'var(--cell-border)';
 
+  // When a cell has a custom background colour, use box-shadow overlay
+  // for selection rather than changing the background.
+  const boxShadow = isSelected && cellColor ? 'inset 0 0 0 2px var(--accent2)' : undefined;
+
+  // Resolved background
+  const bgColor = isOver
+    ? 'rgba(83,52,131,0.3)'
+    : cellColor ?? (isSelected ? 'var(--cell-bg-selected)' : 'var(--cell-bg)');
+
+  // When a custom colour is applied, force all text to near-black regardless of theme.
+  const colorOverride = cellColor ? {
+    '--text': '#111',
+    '--text-dim': '#555',
+    '--strong-color': '#000',
+    '--em-color': '#222',
+    '--link-color': '#0055aa',
+    '--code-bg': 'rgba(0,0,0,0.10)',
+    '--pre-bg': 'rgba(0,0,0,0.10)',
+  } as React.CSSProperties : {};
+
   return (
     <div
       ref={setRefs}
@@ -162,17 +184,15 @@ export const Cell: React.FC<CellProps> = ({
         height,
         flexShrink: 0,
         border: `1px solid ${borderColor}`,
-        background: isOver
-          ? 'rgba(83,52,131,0.3)'
-          : isSelected
-          ? 'var(--cell-bg-selected)'
-          : 'var(--cell-bg)',
+        background: bgColor,
+        boxShadow,
         position: 'relative',
         overflow: 'hidden',
         cursor: editing ? 'text' : isDragging ? 'grabbing' : 'default',
         opacity: isDragging ? 0.4 : 1,
         userSelect: editing ? 'text' : 'none',
         transition: 'background 0.1s, border-color 0.1s',
+        ...colorOverride,
       }}
     >
       {/* Drag handle — only shown when content exists and not editing */}
@@ -241,7 +261,7 @@ export const Cell: React.FC<CellProps> = ({
             if (clampedW !== width) onResizeCol(col, clampedW);
           }}
           placeholder="Type Markdown here…&#10;&#10;Ctrl+Enter or click outside to confirm"
-          style={{ width, height }}
+          style={{ width, height, ...(cellColor ? { background: cellColor, color: '#111' } : {}) }}
         />
       ) : (
         <div

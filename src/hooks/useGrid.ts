@@ -36,7 +36,12 @@ export function useGrid() {
       const existingCell = prev.cells[key];
       const updatedCells = { ...prev.cells };
       if (content === '' && existingCell) {
-        delete updatedCells[key];
+        // Keep the cell entry if it still has a background colour
+        if (existingCell.color) {
+          updatedCells[key] = { ...existingCell, content: '' };
+        } else {
+          delete updatedCells[key];
+        }
       } else if (content !== '') {
         updatedCells[key] = existingCell
           ? { ...existingCell, content }
@@ -113,6 +118,36 @@ export function useGrid() {
     setGrid((prev) => ({ ...prev, rowHeights: { ...prev.rowHeights, ...heights } }));
   }, []);
 
+  const setCellColors = useCallback(
+    (positions: { row: number; col: number }[], color: string | undefined) => {
+      setGrid((prev) => {
+        const updatedCells = { ...prev.cells };
+        for (const { row, col } of positions) {
+          const key = cellKey(row, col);
+          const existing = updatedCells[key];
+          if (color === undefined) {
+            // Remove colour; delete cell entirely if it also has no content
+            if (existing) {
+              if (existing.content) {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { color: _c, ...rest } = existing;
+                updatedCells[key] = rest as CellData;
+              } else {
+                delete updatedCells[key];
+              }
+            }
+          } else {
+            updatedCells[key] = existing
+              ? { ...existing, color }
+              : { id: uuidv4(), row, col, content: '', color };
+          }
+        }
+        return { ...prev, cells: updatedCells };
+      });
+    },
+    []
+  );
+
   const loadGrid = useCallback((newGrid: GridState) => {
     setGrid(newGrid);
   }, []);
@@ -133,6 +168,7 @@ export function useGrid() {
     setAllRowHeights,
     getRowHeight,
     getColWidth,
+    setCellColors,
     loadGrid,
     clearGrid,
   };
