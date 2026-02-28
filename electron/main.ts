@@ -1,8 +1,7 @@
 import { app, BrowserWindow, shell } from 'electron';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// __dirname is available natively in CommonJS (compiled output)
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 let win: BrowserWindow | null = null;
