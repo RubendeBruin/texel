@@ -62,6 +62,66 @@ function inRect(rect: ReturnType<typeof getRect>, r: number, c: number): boolean
   return r >= rect.minRow && r <= rect.maxRow && c >= rect.minCol && c <= rect.maxCol;
 }
 
+// ── clipboard helpers ───────────────────────────────────────────────────────────
+
+/** Escape one cell value for TSV: quote if it contains tab, newline, or double-quote. */
+function tsvEscapeCell(text: string): string {
+  if (text.includes('\t') || text.includes('\n') || text.includes('\r') || text.includes('"')) {
+    return '"' + text.replace(/"/g, '""') + '"';
+  }
+  return text;
+}
+
+/**
+ * Parse a TSV/clipboard string (Excel-compatible, supports quoted fields).
+ * Returns a 2-D array [row][col] of plain strings.
+ */
+function parseTSV(raw: string): string[][] {
+  const result: string[][] = [];
+  let row: string[] = [];
+  let i = 0;
+  const n = raw.length;
+
+  while (i <= n) {
+    if (i === n || raw[i] === '\n' || raw[i] === '\r') {
+      result.push(row);
+      row = [];
+      if (i < n && raw[i] === '\r' && raw[i + 1] === '\n') i++; // CRLF
+      i++;
+    } else if (raw[i] === '\t') {
+      row.push('');
+      i++;
+    } else if (raw[i] === '"') {
+      // Quoted field
+      i++;
+      let field = '';
+      while (i < n) {
+        if (raw[i] === '"' && raw[i + 1] === '"') { field += '"'; i += 2; }
+        else if (raw[i] === '"') { i++; break; }
+        else { field += raw[i++]; }
+      }
+      row.push(field);
+      // skip trailing tab
+      if (i < n && raw[i] === '\t') i++;
+    } else {
+      // Unquoted field
+      const tabIdx = raw.indexOf('\t', i);
+      const nlIdx  = raw.indexOf('\n', i);
+      const crIdx  = raw.indexOf('\r', i);
+      const candidates = [tabIdx, nlIdx, crIdx].filter((x) => x !== -1);
+      const end = candidates.length ? Math.min(...candidates) : n;
+      row.push(raw.slice(i, end));
+      i = end;
+      if (i < n && raw[i] === '\t') i++; // consume tab separator
+    }
+  }
+
+  // Drop trailing empty row that parsers often produce
+  if (result.length > 0 && result[result.length - 1].join('') === '') result.pop();
+
+  return result;
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 
 function ctxItemStyle(danger: boolean): React.CSSProperties {
@@ -173,6 +233,40 @@ export const Grid: React.FC<GridProps> = ({
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       if ((e.target as HTMLElement).tagName === 'TEXTAREA') return;
 
+      // ── copy / cut / paste ───────────────────────────────────────────
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'x')) {
+        if (!selRect) return;
+        const tsvRows: string[] = [];
+        for (let r = selRect.minRow; r <= selRect.maxRow; r++) {
+          const cols: string[] = [];
+          for (let c = selRect.minCol; c <= selRect.maxCol; c++) {
+            cols.push(tsvEscapeCell(getCell(r, c)?.content ?? ''));
+          }
+          tsvRows.push(cols.join('\t'));
+        }
+        navigator.clipboard.writeText(tsvRows.join('\r\n')).catch(() => {});
+        if (e.key === 'x') {
+          // Cut: clear content of selected cells
+          for (let r = selRect.minRow; r <= selRect.maxRow; r++)
+            for (let c = selRect.minCol; c <= selRect.maxCol; c++)
+              setCell(r, c, '');
+        }
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        if (!anchor) return;
+        e.preventDefault();
+        navigator.clipboard.readText().then((text) => {
+          const rows = parseTSV(text);
+          for (let ri = 0; ri < rows.length; ri++)
+            for (let ci = 0; ci < rows[ri].length; ci++)
+              setCell(anchor.row + ri, anchor.col + ci, rows[ri][ci]);
+        }).catch(() => {});
+        return;
+      }
+
+      // ── navigation ───────────────────────────────────────────────
       const NAV_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Escape', 'Tab'];
       if (!NAV_KEYS.includes(e.key)) return;
 
@@ -215,7 +309,7 @@ export const Grid: React.FC<GridProps> = ({
         setSelectionEnd({ row: newRow, col: newCol });
       }
     },
-    [anchor, selectionEnd, numRows, numCols]
+    [anchor, selectionEnd, selRect, numRows, numCols, getCell, setCell]
   );
 
   const sensors = useSensors(
