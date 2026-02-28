@@ -46,8 +46,8 @@ export function exportToPDF(grid: GridState, title = 'Texel Export') {
     format: [pageW, pageH],
   });
 
-  // Background
-  doc.setFillColor(26, 26, 46);
+  // Background — always light for print
+  doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, pageW, pageH, 'F');
 
   const pad = 20; // pt
@@ -60,14 +60,14 @@ export function exportToPDF(grid: GridState, title = 'Texel Export') {
       const cw = colWidths[c] * PX_TO_PT;
       const cell = grid.cells[cellKey(r, c)];
 
-      // Cell background
-      doc.setFillColor(30, 30, 50);
-      doc.setDrawColor(46, 46, 82);
+      // Cell background — always light for print
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(200, 200, 200);
       doc.setLineWidth(0.5);
       doc.rect(x, y, cw, rh, 'FD');
 
       if (cell?.content) {
-        doc.setTextColor(234, 234, 234);
+        doc.setTextColor(26, 26, 26);
         const lines = cell.content.split('\n');
         let ty = y + 12;
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { Grid } from './components/Grid';
 import { useGrid } from './hooks/useGrid';
@@ -6,8 +6,19 @@ import { gridToJson, jsonToGrid, saveFile, openFileDialog } from './utils/fileIO
 import { exportToSVG } from './utils/exportSVG';
 import { exportToPDF } from './utils/exportPDF';
 
+type Theme = 'dark' | 'light';
+
 function App() {
   const [title, setTitle] = useState('Untitled');
+  const [theme, setTheme] = useState<Theme>('dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+  }, []);
   const {
     grid,
     getCell,
@@ -70,6 +81,8 @@ function App() {
         onLoad={handleLoad}
         onExportSVG={handleExportSVG}
         onExportPDF={handleExportPDF}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
       <Grid
         numRows={grid.numRows}

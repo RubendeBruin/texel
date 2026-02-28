@@ -8,6 +8,8 @@ interface ToolbarProps {
   onLoad: () => void;
   onExportSVG: () => void;
   onExportPDF: () => void;
+  theme: 'dark' | 'light';
+  onToggleTheme: () => void;
 }
 
 const btn: React.CSSProperties = {
@@ -37,6 +39,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onLoad,
   onExportSVG,
   onExportPDF,
+  theme,
+  onToggleTheme,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -88,8 +92,19 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
 
       {/* Export */}
-      <button style={btn} onClick={onExportSVG} title="Export grid as SVG">Export SVG</button>
-      <button style={btn} onClick={onExportPDF} title="Export grid as PDF">Export PDF</button>
+      <button style={btn} onClick={onExportSVG} title="Export grid as SVG (light theme)">Export SVG</button>
+      <button style={btn} onClick={onExportPDF} title="Export grid as PDF (light theme)">Export PDF</button>
+
+      <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
+
+      {/* Theme toggle */}
+      <button
+        style={{ ...btn, fontSize: 16, padding: '2px 8px', letterSpacing: 0 }}
+        onClick={onToggleTheme}
+        title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+      >
+        {theme === 'dark' ? '☀️' : '🌙'}
+      </button>
 
       {/* Info */}
       <div

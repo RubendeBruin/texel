@@ -5,6 +5,7 @@
 }
 
 :root {
+  /* Dark theme (default) */
   --bg: #1a1a2e;
   --surface: #16213e;
   --surface2: #0f3460;
@@ -17,9 +18,36 @@
   --cell-bg-hover: #252545;
   --cell-bg-selected: #1a2a4a;
   --cell-border: #2e2e52;
+  --code-bg: #2a2a4a;
+  --pre-bg: #12122a;
+  --editor-bg: #12122a;
+  --link-color: #6da4ff;
+  --strong-color: #fff;
+  --em-color: #ccc;
   --toolbar-h: 48px;
   --col-header-h: 28px;
   --row-header-w: 52px;
+}
+
+html[data-theme="light"] {
+  --bg: #f5f5f5;
+  --surface: #e8e8e8;
+  --surface2: #c8c8d8;
+  --accent: #c0122e;
+  --accent2: #6b44bb;
+  --text: #1a1a1a;
+  --text-dim: #666;
+  --border: #d0d0d0;
+  --cell-bg: #ffffff;
+  --cell-bg-hover: #f0f0f8;
+  --cell-bg-selected: #e8eaf6;
+  --cell-border: #d8d8e8;
+  --code-bg: #ececf4;
+  --pre-bg: #f0f0f8;
+  --editor-bg: #ffffff;
+  --link-color: #1a5dc0;
+  --strong-color: #000;
+  --em-color: #444;
 }
 
 html, body, #root {
@@ -45,24 +73,24 @@ html, body, #root {
 .md-rendered p { margin-bottom: 4px; line-height: 1.5; }
 .md-rendered ul, .md-rendered ol { padding-left: 1.2em; margin-bottom: 4px; }
 .md-rendered li { margin-bottom: 2px; line-height: 1.4; }
-.md-rendered strong { font-weight: 700; color: #fff; }
-.md-rendered em { font-style: italic; color: #ccc; }
+.md-rendered strong { font-weight: 700; color: var(--strong-color); }
+.md-rendered em { font-style: italic; color: var(--em-color); }
 .md-rendered code {
-  background: #2a2a4a;
+  background: var(--code-bg);
   border-radius: 3px;
   padding: 1px 4px;
   font-family: 'Fira Code', 'Cascadia Code', monospace;
   font-size: 0.9em;
 }
 .md-rendered pre {
-  background: #12122a;
+  background: var(--pre-bg);
   border-radius: 5px;
   padding: 8px;
   overflow-x: auto;
   margin-bottom: 4px;
 }
 .md-rendered pre code { background: none; padding: 0; }
-.md-rendered a { color: #6da4ff; text-decoration: none; }
+.md-rendered a { color: var(--link-color); text-decoration: none; }
 .md-rendered a:hover { text-decoration: underline; }
 .md-rendered blockquote {
   border-left: 3px solid var(--accent2);
@@ -75,7 +103,7 @@ html, body, #root {
 .cell-editor {
   width: 100%;
   height: 100%;
-  background: #12122a;
+  background: var(--editor-bg);
   color: var(--text);
   border: none;
   outline: none;

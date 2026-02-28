@@ -43,15 +43,15 @@ export function exportToSVG(grid: GridState, title = 'Texel Export') {
   lines.push(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">`
   );
-  lines.push(`<rect width="${svgWidth}" height="${svgHeight}" fill="#1a1a2e"/>`);
+  lines.push(`<rect width="${svgWidth}" height="${svgHeight}" fill="#ffffff"/>`); 
   lines.push(`<style>
-    text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #eaeaea; }
-    .cell-bg { fill: #1e1e32; stroke: #2e2e52; stroke-width: 1; }
+    text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #1a1a1a; }
+    .cell-bg { fill: #ffffff; stroke: #d0d0d0; stroke-width: 1; }
     .h1 { font-size: 18px; font-weight: bold; }
     .h2 { font-size: 15px; font-weight: bold; }
     .h3 { font-size: 13px; font-weight: bold; }
     .body { font-size: 12px; }
-    .dim { fill: #888; }
+    .dim { fill: #666; }
   </style>`);
 
   // Draw cells
