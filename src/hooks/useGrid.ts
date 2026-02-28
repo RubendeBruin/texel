@@ -105,6 +105,14 @@ export function useGrid() {
     [grid.colWidths]
   );
 
+  const setAllColWidths = useCallback((widths: Record<number, number>) => {
+    setGrid((prev) => ({ ...prev, colWidths: { ...prev.colWidths, ...widths } }));
+  }, []);
+
+  const setAllRowHeights = useCallback((heights: Record<number, number>) => {
+    setGrid((prev) => ({ ...prev, rowHeights: { ...prev.rowHeights, ...heights } }));
+  }, []);
+
   const loadGrid = useCallback((newGrid: GridState) => {
     setGrid(newGrid);
   }, []);
@@ -121,6 +129,8 @@ export function useGrid() {
     swapCells,
     setRowHeight,
     setColWidth,
+    setAllColWidths,
+    setAllRowHeights,
     getRowHeight,
     getColWidth,
     loadGrid,

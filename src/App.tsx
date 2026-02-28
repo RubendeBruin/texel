@@ -5,6 +5,7 @@ import { useGrid } from './hooks/useGrid';
 import { gridToJson, jsonToGrid, saveFile, openFileDialog } from './utils/fileIO';
 import { exportToSVG } from './utils/exportSVG';
 import { exportToPDF } from './utils/exportPDF';
+import { computeAutoColWidths, computeAutoRowHeights } from './utils/autoFit';
 
 type Theme = 'dark' | 'light';
 
@@ -28,6 +29,8 @@ function App() {
     getColWidth,
     setRowHeight,
     setColWidth,
+    setAllColWidths,
+    setAllRowHeights,
     loadGrid,
     clearGrid,
   } = useGrid();
@@ -63,6 +66,15 @@ function App() {
     exportToPDF(grid, title || 'texel');
   }, [grid, title]);
 
+  const handleAutoFit = useCallback(() => {
+    const newColWidths = computeAutoColWidths(grid);
+    // Use the freshly computed widths (not yet in state) for row height measurement
+    const mergedColWidths = { ...grid.colWidths, ...newColWidths };
+    const newRowHeights = computeAutoRowHeights(grid, mergedColWidths);
+    setAllColWidths(newColWidths);
+    setAllRowHeights(newRowHeights);
+  }, [grid, setAllColWidths, setAllRowHeights]);
+
   return (
     <div
       style={{
@@ -81,6 +93,7 @@ function App() {
         onLoad={handleLoad}
         onExportSVG={handleExportSVG}
         onExportPDF={handleExportPDF}
+        onAutoFit={handleAutoFit}
         theme={theme}
         onToggleTheme={toggleTheme}
       />

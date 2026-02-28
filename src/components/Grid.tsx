@@ -200,6 +200,8 @@ export const Grid: React.FC<GridProps> = ({
                           isSelected={selected?.row === r && selected?.col === c}
                           onSelect={handleSelect}
                           onContentChange={setCell}
+                          onResizeRow={setRowHeight}
+                          onResizeCol={setColWidth}
                         />
                       </td>
                     );

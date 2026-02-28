@@ -3,6 +3,22 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 
+// Reusable canvas for text measurement (created once)
+let _canvas: HTMLCanvasElement | null = null;
+function measureLineWidth(text: string): number {
+  if (!_canvas) _canvas = document.createElement('canvas');
+  const ctx = _canvas.getContext('2d')!;
+  ctx.font = "13px 'Fira Code', 'Cascadia Code', Consolas, monospace";
+  return ctx.measureText(text).width;
+}
+
+const H_PAD = 28; // horizontal padding + drag handle clearance
+const V_PAD = 20; // top + bottom padding
+const MIN_W = 80;
+const MAX_W = 600;
+const MIN_H = 40;
+const MAX_H = 800;
+
 interface CellProps {
   row: number;
   col: number;
@@ -12,6 +28,8 @@ interface CellProps {
   isSelected: boolean;
   onSelect: (row: number, col: number) => void;
   onContentChange: (row: number, col: number, content: string) => void;
+  onResizeRow: (row: number, height: number) => void;
+  onResizeCol: (col: number, width: number) => void;
 }
 
 export const Cell: React.FC<CellProps> = ({
@@ -23,6 +41,8 @@ export const Cell: React.FC<CellProps> = ({
   isSelected,
   onSelect,
   onContentChange,
+  onResizeRow,
+  onResizeCol,
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(content);
@@ -172,9 +192,29 @@ export const Cell: React.FC<CellProps> = ({
           ref={textareaRef}
           className="cell-editor"
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
           onBlur={commitEdit}
           onKeyDown={handleKeyDown}
+          onChange={(e) => {
+            const value = e.target.value;
+            setDraft(value);
+
+            // --- live row height ---
+            // Temporarily collapse height so scrollHeight reflects true content height
+            const ta = e.target;
+            const prevH = ta.style.height;
+            ta.style.height = 'auto';
+            const naturalH = Math.min(MAX_H, Math.max(MIN_H, ta.scrollHeight + V_PAD));
+            ta.style.height = prevH; // restore until React re-renders with new height
+            if (naturalH !== height) onResizeRow(row, naturalH);
+
+            // --- live col width ---
+            const longestLine = value.split('\n').reduce<number>((max, line) => {
+              const w = measureLineWidth(line) + H_PAD;
+              return w > max ? w : max;
+            }, MIN_W);
+            const clampedW = Math.min(MAX_W, Math.max(MIN_W, longestLine));
+            if (clampedW !== width) onResizeCol(col, clampedW);
+          }}
           placeholder="Type Markdown here…&#10;&#10;Ctrl+Enter or click outside to confirm"
           style={{ width, height }}
         />

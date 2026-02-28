@@ -8,6 +8,7 @@ interface ToolbarProps {
   onLoad: () => void;
   onExportSVG: () => void;
   onExportPDF: () => void;
+  onAutoFit: () => void;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
 }
@@ -39,6 +40,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onLoad,
   onExportSVG,
   onExportPDF,
+  onAutoFit,
   theme,
   onToggleTheme,
 }) => {
@@ -92,6 +94,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
 
       {/* Export */}
+      <button style={btn} onClick={onAutoFit} title="Auto-size all rows and columns to fit their contents">Auto-fit</button>
+
+      <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
+
       <button style={btn} onClick={onExportSVG} title="Export grid as SVG (light theme)">Export SVG</button>
       <button style={btn} onClick={onExportPDF} title="Export grid as PDF (light theme)">Export PDF</button>
 
