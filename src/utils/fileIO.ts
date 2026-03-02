@@ -2,6 +2,21 @@ import { GridState, TexelFile } from '../types';
 
 const FILE_VERSION = 1;
 
+// TypeScript: augment window with the Electron preload API
+declare global {
+  interface Window {
+    texelAPI?: {
+      platform: string;
+      saveFile?: (content: string, filePath?: string) => Promise<string | null>;
+      openFile?: () => Promise<{ content: string; filePath: string } | null>;
+    };
+  }
+}
+
+function isElectron(): boolean {
+  return typeof window !== 'undefined' && typeof window.texelAPI?.saveFile === 'function';
+}
+
 export function gridToJson(grid: GridState, title = 'Untitled'): string {
   const file: TexelFile = {
     version: FILE_VERSION,
@@ -35,6 +50,23 @@ export function saveFile(content: string, filename: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Save using native dialog in Electron or browser download fallback.
+ * Returns the file path used (Electron) or the derived filename (browser), or null if cancelled.
+ */
+export async function saveFileAuto(
+  content: string,
+  title: string,
+  lastPath: string | null,
+): Promise<string | null> {
+  if (isElectron()) {
+    return window.texelAPI!.saveFile!(content, lastPath ?? undefined);
+  }
+  const filename = lastPath ?? `${title || 'texel'}.texel`;
+  saveFile(content, filename, 'application/json');
+  return filename;
+}
+
 export function openFileDialog(): Promise<string> {
   return new Promise((resolve, reject) => {
     const input = document.createElement('input');
@@ -52,4 +84,20 @@ export function openFileDialog(): Promise<string> {
     input.click();
     document.body.removeChild(input);
   });
+}
+
+/**
+ * Open using native dialog in Electron or browser file input fallback.
+ * Returns { content, filePath } or null if cancelled.
+ */
+export async function openFileAuto(): Promise<{ content: string; filePath: string } | null> {
+  if (isElectron()) {
+    return window.texelAPI!.openFile!();
+  }
+  try {
+    const content = await openFileDialog();
+    return { content, filePath: '' };
+  } catch {
+    return null;
+  }
 }

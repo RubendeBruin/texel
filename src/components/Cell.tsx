@@ -135,14 +135,29 @@ export const Cell: React.FC<CellProps> = ({
       e.preventDefault();
       setEditing(false);
       setDraft(content);
-      onEditEnd(); // return focus to grid for arrow-key navigation
+      onEditEnd();
     }
     // Shift+Enter = new line (default). Ctrl+Enter = commit.
     if ((e.ctrlKey || e.metaKey || e.shiftKey) && e.key === 'Enter') {
       e.preventDefault();
       setEditing(false);
       onContentChange(row, col, draft);
-      onEditEnd(); // return focus to grid for arrow-key navigation
+      onEditEnd();
+    }
+    // Ctrl+B — bold: wrap selection or insert empty bold markers
+    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+      e.preventDefault();
+      const ta = e.currentTarget;
+      const start = ta.selectionStart ?? 0;
+      const end = ta.selectionEnd ?? 0;
+      const selected = draft.slice(start, end);
+      const newDraft = draft.slice(0, start) + '**' + selected + '**' + draft.slice(end);
+      setDraft(newDraft);
+      // Place cursor inside markers when nothing selected, or after closing ** when text selected
+      const newCursor = selected.length === 0 ? start + 2 : end + 4;
+      requestAnimationFrame(() => {
+        ta.setSelectionRange(newCursor, newCursor);
+      });
     }
   };
 
@@ -248,7 +263,7 @@ export const Cell: React.FC<CellProps> = ({
             const ta = e.target;
             const prevH = ta.style.height;
             ta.style.height = 'auto';
-            const naturalH = Math.min(MAX_H, Math.max(MIN_H, ta.scrollHeight + V_PAD));
+            const naturalH = Math.min(MAX_H, Math.max(MIN_H, height, ta.scrollHeight + V_PAD));
             ta.style.height = prevH; // restore until React re-renders with new height
             if (naturalH !== height) onResizeRow(row, naturalH);
 
@@ -257,7 +272,7 @@ export const Cell: React.FC<CellProps> = ({
               const w = measureLineWidth(line) + H_PAD;
               return w > max ? w : max;
             }, MIN_W);
-            const clampedW = Math.min(MAX_W, Math.max(MIN_W, longestLine));
+            const clampedW = Math.min(MAX_W, Math.max(MIN_W, width, longestLine));
             if (clampedW !== width) onResizeCol(col, clampedW);
           }}
           placeholder="Type Markdown here…&#10;&#10;Ctrl+Enter, Shift+Enter, or click outside to confirm"

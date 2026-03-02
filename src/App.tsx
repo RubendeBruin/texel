@@ -1,8 +1,8 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { Grid } from './components/Grid';
 import { useGrid } from './hooks/useGrid';
-import { gridToJson, jsonToGrid, saveFile, openFileDialog } from './utils/fileIO';
+import { gridToJson, jsonToGrid, saveFileAuto, openFileAuto } from './utils/fileIO';
 import { exportToSVG } from './utils/exportSVG';
 import { exportToPDF } from './utils/exportPDF';
 import { computeAutoColWidths, computeAutoRowHeights } from './utils/autoFit';
@@ -11,7 +11,10 @@ type Theme = 'dark' | 'light';
 
 function App() {
   const [title, setTitle] = useState('Untitled');
-  const [theme, setTheme] = useState<Theme>('dark');
+  const [theme, setTheme] = useState<Theme>('light');
+  const [fillColor, setFillColor] = useState('#ffd700');
+  const [selectedPositions, setSelectedPositions] = useState<{ row: number; col: number }[]>([]);
+  const [lastFilename, setLastFilename] = useState<string | null>(null);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -36,6 +39,7 @@ function App() {
     deleteRow,
     insertCol,
     deleteCol,
+    expandGrid,
     loadGrid,
     clearGrid,
   } = useGrid();
@@ -47,21 +51,60 @@ function App() {
     }
   }, [clearGrid]);
 
-  const handleSave = useCallback(() => {
+  const handleSelectionChange = useCallback((positions: { row: number; col: number }[]) => {
+    setSelectedPositions(positions);
+  }, []);
+
+  const handleSwatchApply = useCallback((color: string) => {
+    setFillColor(color);
+    if (selectedPositions.length > 0) setCellColors(selectedPositions, color);
+  }, [selectedPositions, setCellColors]);
+
+  const handleApplyFill = useCallback(() => {
+    if (selectedPositions.length > 0) setCellColors(selectedPositions, fillColor);
+  }, [selectedPositions, fillColor, setCellColors]);
+
+  const handleClearFill = useCallback(() => {
+    if (selectedPositions.length > 0) setCellColors(selectedPositions, undefined);
+  }, [selectedPositions, setCellColors]);
+
+  const handleSave = useCallback(async () => {
     const json = gridToJson(grid, title);
-    saveFile(json, `${title || 'texel'}.texel`, 'application/json');
-  }, [grid, title]);
+    const usedPath = await saveFileAuto(json, title, lastFilename);
+    if (usedPath) setLastFilename(usedPath);
+  }, [grid, title, lastFilename]);
 
   const handleLoad = useCallback(async () => {
     try {
-      const raw = await openFileDialog();
-      const file = jsonToGrid(raw);
+      const result = await openFileAuto();
+      if (!result) return;
+      const file = jsonToGrid(result.content);
       loadGrid(file.grid);
-      setTitle(file.metadata.title || 'Untitled');
+      const loadedTitle = file.metadata.title || 'Untitled';
+      setTitle(loadedTitle);
+      if (result.filePath) {
+        setLastFilename(result.filePath);
+      } else {
+        setLastFilename(`${loadedTitle}.texel`);
+      }
     } catch (e) {
       alert('Failed to open file: ' + (e as Error).message);
     }
   }, [loadGrid]);
+
+  // Ctrl+S global shortcut — save using last filename
+  const handleSaveRef = useRef(handleSave);
+  useEffect(() => { handleSaveRef.current = handleSave; }, [handleSave]);
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSaveRef.current();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const handleExportSVG = useCallback(() => {
     exportToSVG(grid, title || 'texel');
@@ -91,8 +134,6 @@ function App() {
       }}
     >
       <Toolbar
-        title={title}
-        onTitleChange={setTitle}
         onNew={handleNew}
         onSave={handleSave}
         onLoad={handleLoad}
@@ -101,6 +142,12 @@ function App() {
         onAutoFit={handleAutoFit}
         theme={theme}
         onToggleTheme={toggleTheme}
+        selCount={selectedPositions.length}
+        fillColor={fillColor}
+        onFillColorChange={setFillColor}
+        onSwatchApply={handleSwatchApply}
+        onApplyFill={handleApplyFill}
+        onClearFill={handleClearFill}
       />
       <Grid
         numRows={grid.numRows}
@@ -117,6 +164,8 @@ function App() {
         deleteRow={deleteRow}
         insertCol={insertCol}
         deleteCol={deleteCol}
+        expandGrid={expandGrid}
+        onSelectionChange={handleSelectionChange}
       />
     </div>
   );

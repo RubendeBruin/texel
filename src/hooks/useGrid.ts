@@ -234,6 +234,14 @@ export function useGrid() {
 
 
 
+  const expandGrid = useCallback((minRows: number, minCols: number) => {
+    setGrid((prev) => ({
+      ...prev,
+      numRows: Math.max(prev.numRows, minRows),
+      numCols: Math.max(prev.numCols, minCols),
+    }));
+  }, []);
+
   const clearGrid = useCallback(() => {
     setGrid(createInitialGrid());
   }, []);
@@ -255,6 +263,7 @@ export function useGrid() {
     deleteRow,
     insertCol,
     deleteCol,
+    expandGrid,
     loadGrid,
     clearGrid,
   };
