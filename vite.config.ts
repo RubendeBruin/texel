@@ -9,7 +9,8 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  base: './',
+  // Use './' for Electron (relative paths). Set VITE_BASE_URL for web deployments (e.g. '/texel/' for GitHub Pages).
+  base: process.env.VITE_BASE_URL ?? './',
   build: {
     outDir: 'dist',
     emptyOutDir: true,
