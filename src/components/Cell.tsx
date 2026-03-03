@@ -12,6 +12,27 @@ function measureLineWidth(text: string): number {
   return ctx.measureText(text).width;
 }
 
+// Safe protocols allowed in markdown links
+const SAFE_PROTOCOLS = ['http:', 'https:', 'mailto:', 'ftp:'];
+function isSafeHref(href?: string): boolean {
+  if (!href) return false;
+  try {
+    return SAFE_PROTOCOLS.includes(new URL(href).protocol);
+  } catch {
+    return false; // relative URLs or unparseable hrefs
+  }
+}
+
+// Custom link renderer — opens links in a new tab and sanitizes href
+const mdComponents = {
+  a: ({ href, children }: React.AnchorHTMLAttributes<HTMLAnchorElement>) =>
+    isSafeHref(href) ? (
+      <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+    ) : (
+      <span>{children}</span>
+    ),
+};
+
 const H_PAD = 28; // horizontal padding + drag handle clearance
 const V_PAD = 20; // top + bottom padding
 const MIN_W = 80;
@@ -292,7 +313,10 @@ export const Cell: React.FC<CellProps> = ({
           }}
         >
           {hasContent ? (
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={mdComponents}
+            >{content}</ReactMarkdown>
           ) : (
             <span style={{ opacity: 0.3, fontSize: 11 }}>double-click to edit</span>
           )}
